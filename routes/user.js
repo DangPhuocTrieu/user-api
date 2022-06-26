@@ -44,14 +44,25 @@ router.get('/:id', async (req, res) => {
 // ADD USER
 router.post('/create', async (req, res) => {
     try {
-        const newUser = new User(req.body)
-        const savedUser = await newUser.save()
+        const extistUserName = await User.findOne({ userName: req.body.userName })
+        const extistEmail = await User.findOne({ email: req.body.email })
 
-        res.status(200).json({
-            success: true,
-            message: 'Add user successfully!',
-            user: savedUser
-         })
+        if(extistUserName || extistEmail) {
+            res.status(400).json({
+                success: false,
+                message: 'Username or email already exist',
+             })
+        }
+        else {
+            const newUser = new User(req.body)
+            const savedUser = await newUser.save()
+
+            res.status(200).json({
+                success: true,
+                message: 'Add user successfully!',
+                user: savedUser
+             })
+        }
 
     } catch (error) {
         res.status(500).json({
@@ -63,18 +74,36 @@ router.post('/create', async (req, res) => {
 
 // EDIT USER
 router.put('/edit/:id', async (req, res) => {
-    try {
-        const userUpdated = await User.findOneAndUpdate(
-            { _id: req.params.id },
-            { ...req.body },
-            { new: true }
-        )
+    const id = req.params.id
 
-        res.status(200).json({
-            success: true,
-            message: 'Update user successfully!',
-            user: userUpdated
-         })
+    try {
+        const currentUser = await User.findById(id)
+
+        const existUserName = await User.findOne({ userName: req.body.userName })
+        const existEmail = await User.findOne({ email: req.body.email })
+
+        const isValidUserName = req.body.userName === currentUser.userName
+        const isValidEmail = req.body.email === currentUser.email
+
+        if( (isValidUserName && isValidEmail) || (!existUserName && !existEmail) ) { 
+            const userUpdated = await User.findOneAndUpdate(
+                { _id: id },
+                { ...req.body },
+                { new: true }
+            )
+
+            res.status(200).json({
+                success: true,
+                message: 'Update user successfully!',
+                user: userUpdated
+             })
+        }
+        else {
+            res.status(400).json({
+                success: false,
+                message: 'Username or email already exist',
+             })
+        }
 
     } catch (error) {
         res.status(500).json({
